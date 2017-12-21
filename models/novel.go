@@ -55,6 +55,10 @@ var (
 
 func init() {
 	dbSetupOnInit()
+	err := redisClient.Ping().Err()
+	if nil != err {
+		panic(err)
+	}
 }
 
 /*
