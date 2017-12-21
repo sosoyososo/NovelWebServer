@@ -1,11 +1,14 @@
 package models
 
 import (
+	"strings"
+
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
 type Novel struct {
+	Id       bson.ObjectId `json:"id" bson:"_id"`
 	URL      string
 	Title    string
 	Author   string
@@ -15,6 +18,7 @@ type Novel struct {
 }
 
 type Chapter struct {
+	Id      bson.ObjectId `json:"id" bson:"_id"`
 	Cateurl string
 	Title   string
 	URL     string
@@ -41,33 +45,68 @@ const (
 )
 
 func init() {
-	dbSession, err := mgo.Dial(dbAddress)
-	if err != nil {
-		panic(err)
-	}
-	db = dbSession.DB(dbName)
-	novelCollection = db.C(novelCollectionName)
-	chapterCollectionCollection = db.C(chapterCCName)
-
-	updateChapterCC()
+	dbSetupOnInit()
 }
 
 /*
 	model action
 */
-func (n *Novel) GetChapters(page int) []Novel {
-	return []Novel{}
-}
-
 func GetNovelsOnPage(page int) ([]Novel, error) {
 	query := db.C(novelCollectionName).Find(bson.M{}).Skip(page * 10).Limit(10)
 	_, err := query.Count()
 	if err == nil {
 		list := make([]Novel, 10)
 		err = query.All(&list)
+		removeList := []string{"UU看书",
+			"https://www.uukanshu.cｏm",
+			"https://www.uukanshu.com",
+			"www.uukanshu.cｏm",
+			"www.uukanshu.com",
+			"www.uuｋａnsｈu.ｃom",
+			"添加更新提醒，有最新章节时，将会发送邮件到您的邮箱。",
+			"(adsbygoogle = window.adsbygoogle || []).push({});",
+			"如果喜欢《修真聊天群》，请把网址发给您的朋友。收藏本页请按  Ctrl + D，为方便下次阅读也可把本书添加到桌面，添加桌面请猛击这里。"}
+		j := 0
+		for j < len(list) {
+			i := 0
+			for i < len(removeList) {
+				list[j].Summary = strings.Replace(list[j].Summary, removeList[i], "", -1)
+				i++
+			}
+
+			j++
+		}
 		return list, err
 	} else {
 		return nil, err
+	}
+}
+
+func getNovelWithURL(url string) (*Novel, error) {
+	query := novelCollection.Find(bson.M{"url": url})
+	c, err := query.Count()
+	if nil != err {
+		return nil, err
+	} else if c <= 0 {
+		return nil, NewModelError(-1, "没有找到小说")
+	} else {
+		novel := Novel{}
+		err = query.One(&novel)
+		return &novel, err
+	}
+}
+
+func getNovelWithId(id string) (*Novel, error) {
+	query := novelCollection.FindId(bson.ObjectIdHex(id))
+	c, err := query.Count()
+	if nil != err {
+		return nil, err
+	} else if c <= 0 {
+		return nil, NewModelError(-1, "没有找到小说")
+	} else {
+		novel := Novel{}
+		err = query.One(&novel)
+		return &novel, err
 	}
 }
 
@@ -82,6 +121,17 @@ func SearchTagNovel(author string) []Novel {
 /*
 db action
 */
+func dbSetupOnInit() {
+	dbSession, err := mgo.Dial(dbAddress)
+	if err != nil {
+		panic(err)
+	}
+	db = dbSession.DB(dbName)
+	novelCollection = db.C(novelCollectionName)
+	chapterCollectionCollection = db.C(chapterCCName)
+
+	updateChapterCC()
+}
 func updateChapterCC() {
 	chapterCollections = []ChapterCollection{}
 	iter := chapterCollectionCollection.Find(bson.M{}).Iter()
