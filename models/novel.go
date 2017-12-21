@@ -3,6 +3,7 @@ package models
 import (
 	"strings"
 
+	"github.com/go-redis/redis"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -44,6 +45,14 @@ const (
 	chapterCCName       = "chaptercollections"
 )
 
+var (
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+)
+
 func init() {
 	dbSetupOnInit()
 }
@@ -52,7 +61,7 @@ func init() {
 	model action
 */
 func GetNovelsOnPage(page int) ([]Novel, error) {
-	query := db.C(novelCollectionName).Find(bson.M{}).Skip(page * 10).Limit(10)
+	query := db.C(novelCollectionName).Find(bson.M{}).Skip(page * 20).Limit(20)
 	_, err := query.Count()
 	if err == nil {
 		list := make([]Novel, 10)

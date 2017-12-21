@@ -2,6 +2,7 @@ package models
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"strings"
 	"uu/HtmlWorker"
@@ -31,6 +32,14 @@ func GetChaptersForNovelWithId(id string, page int) (*[]Chapter, error) {
 }
 
 func GetChapterDetailWithURL(url string) (*ChapterDetail, error) {
+	chapter, _ := getChapterContentWithURLFromRedis(url)
+	if chapter != nil {
+		return chapter, nil
+	}
+	return getChapterContentWithURL(url)
+}
+
+func getChapterContentWithURL(url string) (*ChapterDetail, error) {
 	chapter := ChapterDetail{}
 	action1 := HtmlWorker.NewAction("div.h1title", func(s *goquery.Selection) {
 		chapter.Title = s.Find("#timu").Text()
@@ -67,7 +76,34 @@ func GetChapterDetailWithURL(url string) (*ChapterDetail, error) {
 		e = err
 	}
 	worker.Run()
+	if e == nil {
+		saveChapterToRedis(url, chapter)
+	}
 	return &chapter, e
+}
+
+func saveChapterToRedis(url string, chapter ChapterDetail) error {
+	serialized, err := json.Marshal(chapter)
+	if nil != err {
+		return err
+	}
+	content := string(serialized)
+	err = redisClient.Set(url, content, 0).Err()
+	return err
+}
+
+func getChapterContentWithURLFromRedis(url string) (*ChapterDetail, error) {
+	val, err := redisClient.Get(url).Result()
+	if err != nil {
+		return nil, err
+	}
+	chaper := ChapterDetail{}
+	err = json.Unmarshal([]byte(val), &chaper)
+	if nil != err {
+		return nil, err
+	} else {
+		return &chaper, nil
+	}
 }
 
 func (n *Novel) getChapters(page int) (*[]Chapter, error) {
@@ -75,7 +111,7 @@ func (n *Novel) getChapters(page int) (*[]Chapter, error) {
 	if c == nil {
 		return nil, NewModelError(-1, "没有找到对应的章节")
 	} else {
-		query := c.Find(bson.M{"cateurl": n.URL}).Sort("index").Skip(page * 10).Limit(10)
+		query := c.Find(bson.M{"cateurl": n.URL}).Sort("index").Skip(page * 20).Limit(20)
 		list := make([]Chapter, 10)
 		err := query.All(&list)
 		if nil != err {
