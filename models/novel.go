@@ -123,14 +123,6 @@ func getNovelWithId(id string) (*Novel, error) {
 	}
 }
 
-func SearchAuthorNovel(author string) []Novel {
-	return []Novel{}
-}
-
-func SearchTagNovel(author string) []Novel {
-	return []Novel{}
-}
-
 /*
 db action
 */
