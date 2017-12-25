@@ -63,6 +63,11 @@ func searchNovels(key string, s State, page int) (*[]Novel, error) {
 				i++
 			}
 
+			if len(list[j].Summary) > 200 {
+				list[j].Summary = list[j].Summary[0:200]
+				list[j].Summary = list[j].Summary + "..."
+			}
+
 			j++
 		}
 		return &list, err

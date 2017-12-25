@@ -86,6 +86,10 @@ func GetNovelsOnPage(page int) ([]Novel, error) {
 				list[j].Summary = strings.Replace(list[j].Summary, removeList[i], "", -1)
 				i++
 			}
+			if len(list[j].Summary) > 200 {
+				list[j].Summary = list[j].Summary[0:200]
+				list[j].Summary = list[j].Summary + "..."
+			}
 
 			j++
 		}

@@ -58,6 +58,7 @@ func getChapterContentWithURL(url string) (*ChapterDetail, error) {
 			text = strings.Replace(text, removeList[i], "", -1)
 			i++
 		}
+		text = strings.TrimSpace(text)
 		chapter.Content = text
 	})
 	worker := HtmlWorker.New(url, []HtmlWorker.WorkerAction{action1, action2})
